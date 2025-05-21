@@ -147,7 +147,7 @@ python -m examples.test_realtime_transcribe_client
 
 ## Demo
 
-[Download or view the video](https://github.com/liviaerxin/voice-agent/blob/main/screen_record/screen_20250521.mp4)
+![Download or view the video](https://github.com/liviaerxin/voice-agent/blob/main/screen_record/screen_20250521.mp4)
 
 ## Implementation Checklist
 
