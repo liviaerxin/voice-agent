@@ -55,6 +55,7 @@
 
       const startRecording = async () => {
         console.log('startRecording');
+        ws.send(JSON.stringify({ event: 'start' }));
 
         // PCM 24Khz, 16bit, 1 channel
         const audioContext = new AudioContext({ sampleRate: 24000 });

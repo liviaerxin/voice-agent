@@ -28,6 +28,7 @@ class RealtimeTranscribeClient:
         self.input_audio_format = "pcm16"
 
     async def connect(self):
+        logger.info("Connected to OpenAI Realtime API!")
         headers = {"Authorization": f"Bearer {self.api_key}", "OpenAI-Beta": "realtime=v1"}
         url = f"{self.base_uri}?intent=transcription"  # &model=gpt-4o-realtime-preview-2024-10-01
 
@@ -46,7 +47,7 @@ class RealtimeTranscribeClient:
                 "input_audio_transcription": {
                     # "model": "gpt-4o-mini-transcribe",
                     "model": self.transcribe_model,
-                    "prompt": "Transcribe the incoming audio in real time.",
+                    "prompt": "Transcribe the incoming audio in real time. language English",
                     "language": "en",
                 },
                 "turn_detection": {
@@ -84,19 +85,20 @@ class RealtimeTranscribeClient:
 
                     # Handle interruptions
                     elif event_type == "input_audio_buffer.speech_started":
-                        logger.info("\n[Speech detected")
+                        logger.info("\n[Speech detected]")
 
                     elif event_type == "input_audio_buffer.speech_stopped":
                         logger.info("\n[Speech ended]")
 
                     # Handle input audio transcription
                     elif event_type == "conversation.item.input_audio_transcription.completed":
+                        logger.info(f"\n[Transcription completed]")
                         transcript = data.get("transcript", "")
 
-                        logger.info(f"Transcription {transcript}")
                         yield transcript  # Yield the transcript here
 
                     elif event_type == "conversation.item.input_audio_transcription.delta":
+                        logger.debug(f"\n[Transcription delta]")
                         # delta = data.get("delta", "")
                         # logger.info("Transcription delta: %s", delta)
                         # final_transcription += delta

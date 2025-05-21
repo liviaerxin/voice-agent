@@ -1,9 +1,9 @@
 
-# Voice Agent Server
+# Voice Agent Server Prototype
 
 ## Introduction
 
-This project implements a **Voice Agent** using the **OpenAI** ecosystem, built around **Speech-to-Text**, **LLM**, and **Text-to-Speech**.
+This Prototype project implements a **Voice Agent** using the **OpenAI** ecosystem, built around **Speech-to-Text**, **LLM**, and **Text-to-Speech**.
 
 There are two main architectures for implementing a voice agent:
 
@@ -19,7 +19,7 @@ There are two main architectures for implementing a voice agent:
 - **added latency**
 - More control and flexibility
 - APIs used:
-  - Transcription API
+  - [Realtime API/Transcription](https://platform.openai.com/docs/guides/realtime-transcription)
   - Chat Completions API
   - Speech API
 
@@ -38,23 +38,24 @@ There are two main architectures for implementing a voice agent:
 
 To reduce latency in the current pipeline:
 
-1. **In-memory audio buffer** – avoids file I/O delays
-2. **Streaming audio playback** – streams audio from OpenAI to the browser as it's generated
-3. **PCM format** – raw, low-latency audio format reduces encoding/decoding overhead
+1. **Realtime API/Transcription** - transcribe the ongoing audio input, as `browser microphone streams audio -> our server streams audio -> OpenAI Realtime Transcription -> text`.
+2. **In-memory audio buffer** – avoids file I/O delays
+3. **Streaming audio playback** – streams audio from OpenAI to the browser as it's generated
+4. **PCM format** – raw, low-latency audio format reduces encoding/decoding overhead and get fast response from OpenAI API
 
-Still, the response will increase as the speech getting longer . See [Latency Analysis](#latency-analysis) for details.
+Here we **Realtime API/Transcription** to replace **Transcription API** to reduce latency. See [Latency Analysis](#latency-analysis) for details.
 
 ## Tech Stack
 
-| Component    | Tool / API                                      | Reason                                                         |
-|--------------|--------------------------------------------------|----------------------------------------------------------------|
-| Audio Format | WAV (file input), PCM (streaming in/out)         | Raw format ensures low-latency transmission                    |
-| Transport    | WebSocket                                         | Enables async, bi-directional streaming                        |
-| STT          | `gpt-4o-mini-transcribe` (OpenAI)                | Accurate, streaming-capable speech-to-text                    |
-| LLM          | `gpt-4.1-mini` (OpenAI ChatCompletion)           | Low-latency, concise responses                                 |
-| TTS          | `gpt-4o-mini-tts` (OpenAI)                       | Fast, natural-sounding speech with stream output               |
-| Backend      | Python + FastAPI + WebSocket                     | Async-native server suitable for real-time apps               |
-| Client       | HTML5 + JS + Web Audio API                       | Lightweight browser-based voice interaction                   |
+| Component    | Tool / API                             | Reason                                           |
+|--------------|----------------------------------------|--------------------------------------------------|
+| Audio Format | PCM (streaming in/out)                 | Raw format ensures low-latency transmission      |
+| Transport    | WebSocket                              | Enables async, bi-directional streaming          |
+| STT          | `gpt-4o-mini-transcribe` (OpenAI)      | Accurate, streaming-capable speech-to-text       |
+| LLM          | `gpt-4.1-mini` (OpenAI ChatCompletion) | Low-latency, concise responses                   |
+| TTS          | `gpt-4o-mini-tts` (OpenAI)             | Fast, natural-sounding speech with stream output |
+| Backend      | Python + FastAPI + WebSocket           | Async-native server suitable for real-time apps  |
+| Client       | HTML5 + JS + Web Audio API             | Lightweight browser-based voice interaction      |
 
 ### WebSocket vs WebRTC
 
@@ -72,8 +73,8 @@ We use **WebSocket** for browser compatibility and easier server orchestration.
 | webm/Opus  | Smaller size                                     | Slower to decode, adds delay |
 
 - Preferred:
-  - **PCM**: 24kHz, 16-bit, mono, little-endian
-  - **WAV**: Input for STT
+  - **PCM**: 24kHz, 16-bit, mono, little-endian, for realtime api
+  - **WAV**: Input file for STT
 - Refer to [OpenAI Supported Formats](https://platform.openai.com/docs/guides/text-to-speech#supported-output-formats)
 
 ### Streaming vs Real-time
@@ -93,14 +94,20 @@ We use **WebSocket** for browser compatibility and easier server orchestration.
 ```text
 Client (Mic Input)
      ↓ WebSocket
-Audio Input Buffer
+Audio Stream
      ↓
-[STT] GPT-4o Transcribe
+Server
      ↓
-[LLM] GPT-4.1 mini (1-word response)
+Audio Stream
      ↓
-[TTS] GPT-4o mini
+[Real-time API/Transcription] GPT-4o mini Transcribe
+     ↓
+[Chat Completions API] GPT-4.1 mini (1-word response)
+     ↓
+[Speech API] GPT-4o mini tts
      ↓ WebSocket
+Audio Stream
+     ↓
 Streaming audio playback on browser
 ```
 
@@ -147,18 +154,16 @@ python -m examples.test_realtime_transcribe_client
 
 ## Demo
 
-
 ![Watch the video](https://github.com/user-attachments/assets/4c7e55ba-f48f-43ab-839c-0dbca66aeda2)
-
 
 ## Implementation Checklist
 
 - [x] Audio WebSocket Server
   - [x] Buffer audio input
   - [x] Serve static client (HTML + JS) for demo
-- [x] Speech-to-Text (STT)
+- [x] Speech-to-Text (Realtime API/STT)
   - [x] Transcribe complete audio input
-  - [] Transcribe ongoing audio input
+  - [x] Transcribe ongoing audio input, with voice activity detection (VAD)
 - [x] LLM Response (GPT-4.1 mini)
 - [x] Text-to-Speech (TTS)
   - [x] Send full audio response
@@ -166,66 +171,54 @@ python -m examples.test_realtime_transcribe_client
 - [x] Browser Client
   - [x] Record mic audio and send via WebSocket (PCM16, 24kHz, mono)
   - [x] Play back PCM audio in real-time
-  - [] Use voice activity detection (VAD) to replace manual recording
+  - [x] Use voice activity detection (VAD) to replace manual recording
 - [] Concurrent load testing
 - [] Decouple STT / LLM / TTS into microservices
-- [] [Voice Activity Detection (OpenAI Docs)](https://platform.openai.com/docs/guides/realtime-vad)
 
 ## Latency Analysis
 
 ### Example 1: Short speech
 
 ```sh
-INFO:     connection open
-2025-05-21 12:52:49.767 - INFO - Setup the transcription session
-2025-05-21 12:52:49.768 - INFO - Session[16acea63-9bf2-4d92-84ed-c67f3261f73a] start
-2025-05-21 12:52:49.768 - INFO - Session[16acea63-9bf2-4d92-84ed-c67f3261f73a] Seq[0] start
-2025-05-21 12:52:52.027 - INFO - Save audio buffer size[95532] and audio file to [data/16acea63-9bf2-4d92-84ed-c67f3261f73a/0_in_16_24kHZ_mono.wav]
-2025-05-21 12:52:52.027 - INFO - SST start...
-2025-05-21 12:52:53.763 - INFO - HTTP Request: POST https://api.openai.com/v1/audio/transcriptions "HTTP/1.1 200 OK"
-2025-05-21 12:52:53.840 - INFO - transcribed_text: How are you?
-2025-05-21 12:52:53.840 - INFO - LLM start...
-2025-05-21 12:52:54.686 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-2025-05-21 12:52:54.689 - INFO - llm_response_text: Great!
-2025-05-21 12:52:54.689 - INFO - TTS start...
-2025-05-21 12:52:55.708 - INFO - HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
-2025-05-21 12:52:55.709 - INFO - Streaming speech to client, data size[500]
-2025-05-21 12:52:55.709 - INFO - Streaming speech to client, data size[500]
-...
-2025-05-21 12:52:55.822 - INFO - Streaming speech to client, data size[500]
-2025-05-21 12:52:55.823 - INFO - Streaming speech to client, data size[200]
-2025-05-21 12:52:55.825 - INFO - speech save to: data/16acea63-9bf2-4d92-84ed-c67f3261f73a/0_out.pcm
-2025-05-21 12:52:55.825 - INFO - Session[16acea63-9bf2-4d92-84ed-c67f3261f73a] Seq[0] close
-2025-05-21 12:52:55.825 - INFO - Session[16acea63-9bf2-4d92-84ed-c67f3261f73a] Seq[1] start
+2025-05-21 15:40:19.353 - INFO - HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
+2025-05-21 15:40:19.450 - INFO - 
+[Speech detected]
+2025-05-21 15:40:19.936 - INFO - 
+[Speech ended]
+2025-05-21 15:40:20.767 - INFO - 
+[Transcription completed]
+transcribed_text: How are you?
+2025-05-21 15:40:20.767 - INFO - LLM start...
+2025-05-21 15:40:21.265 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-21 15:40:21.323 - INFO - llm_response_text: Fine.
+2025-05-21 15:40:21.323 - INFO - TTS start...
+2025-05-21 15:40:21.906 - INFO - HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
 ```
 
-Audio Received → STT: ~1.7s
-LLM Response: ~0.8s
+Audio ended → STT: ~0.8s
+LLM Response: ~0.5s
 TTS Start to First Output: ~0.6s
-Total round-trip: ~3.5–4s
 
 ### Example 2: Longer speech
 
 ```sh
-2025-05-21 12:57:27.643 - INFO - SST start...
-2025-05-21 12:57:31.631 - INFO - HTTP Request: POST https://api.openai.com/v1/audio/transcriptions "HTTP/1.1 200 OK"
-2025-05-21 12:57:31.915 - INFO - transcribed_text: Could you tell me about your feeling if the weather is bad or if it's a cloudy day? How will you feel? Will you feel good or will you feel bad?
-2025-05-21 12:57:31.915 - INFO - LLM start...
-2025-05-21 12:57:32.664 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-2025-05-21 12:57:32.708 - INFO - llm_response_text: Neutral
-2025-05-21 12:57:32.708 - INFO - TTS start...
-2025-05-21 12:57:33.317 - INFO - HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
-2025-05-21 12:57:33.318 - INFO - Streaming speech to client, data size[500]
-...
-2025-05-21 12:57:33.399 - INFO - Streaming speech to client, data size[300]
-2025-05-21 12:57:33.401 - INFO - speech save to: data/16acea63-9bf2-4d92-84ed-c67f3261f73a/1_out.pcm
-2025-05-21 12:57:33.401 - INFO - Session[16acea63-9bf2-4d92-84ed-c67f3261f73a] Seq[1] close
-2025-05-21 12:57:33.401 - INFO - Session[16acea63-9bf2-4d92-84ed-c67f3261f73a] Seq[2] start
+2025-05-21 15:50:38.447 - INFO - 
+[Speech detected]
+2025-05-21 15:50:47.164 - INFO - 
+[Speech ended]
+2025-05-21 15:50:49.435 - INFO - 
+[Transcription completed]
+transcribed_text: Could you tell me about your feeling if the weather is bad or if it's a cloudy day, how will you feel? Will you feel good or will you feel bad?
+2025-05-21 15:50:49.435 - INFO - LLM start...
+2025-05-21 15:50:49.953 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-21 15:50:49.968 - INFO - llm_response_text: Neutral
+2025-05-21 15:50:49.968 - INFO - TTS start...
+2025-05-21 15:50:50.527 - INFO - HTTP Request: POST https://api.openai.com/v1/audio/speech "HTTP/1.1 200 OK"
 ```
 
 
-Audio Received → STT: ~4s
-LLM Response: ~0.8s
+Audio ended → STT: ~2.3s, shorter than using Transcription API as it takes ~4s.
+LLM Response: ~0.6s
 TTS Start to First Output: ~0.6s
 
 
@@ -237,7 +230,7 @@ So, The **STT** process is the primary latency bottleneck, especially for longer
 
 - Host closer to OpenAI (e.g., in Azure)
 - Deploy **on-prem** STT/TTS models (e.g., Whisper, Coqui)
-- Use **true realtime** services:
+- Use **true realtime** services by leverage streaming on the whole data pipeline:
   - Streaming STT input → Streaming LLM → Streaming TTS
 
 ### Scalability
@@ -250,7 +243,11 @@ So, The **STT** process is the primary latency bottleneck, especially for longer
 
 ### Functionality
 
-- Auto-detect speech start/end using VAD
+- Refactor the project
+- Add test cases
+- Handle HTTP error
+  - 400 for missing/invalid input.oReturn
+  - HTTP 502 with meaningful errors for STT, LLM, or TTS failures
 - Handle edge cases and failures in WebSocket messages
 - Use **state machine** for fine-grained control over STT/LLM/TTS pipeline
 
@@ -268,3 +265,7 @@ This project demonstrates how to prototype a real-time voice assistant using Ope
 - [Streaming Speech-to-Text](https://platform.openai.com/docs/guides/audio/speech-to-text)
 - [Text-to-Speech Formats](https://platform.openai.com/docs/guides/text-to-speech#supported-output-formats)
 - [Voice Activity Detection (VAD)](https://platform.openai.com/docs/guides/realtime-vad)
+- [GitHub - alesaccoia/VoiceStreamAI: Near-Realtime audio transcription using self-hosted Whisper and WebSocket in Python/JS](https://github.com/alesaccoia/VoiceStreamAI)
+- [From Gemini API to Local: Building a Fully Open-Source Realtime Multimodal Assistant](https://yeyu.substack.com/p/from-gemini-api-to-local-building)
+- [GitHub - tomcatmwi/browser-pcm16mono: Demo files for my article titled 'Streaming audio with 16–bit mono PCM encoding from the browser (and how to mix audio, while we are at it)'](https://github.com/tomcatmwi/browser-pcm16mono)
+- [Realtime API (Advanced Voice Mode) Python Implementation - #12 by NuclearGeek - API - OpenAI Developer Community](https://community.openai.com/t/realtime-api-advanced-voice-mode-python-implementation/964636/12)

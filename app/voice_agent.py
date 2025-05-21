@@ -97,7 +97,7 @@ class VoiceAgentOpenAI:
 
             async for data in response.iter_bytes(self.chunk_size):
                 # Stream to ws
-                logger.info(f"Streaming speech to client, data size[{len(data)}]")
+                logger.debug(f"Streaming speech to client, data size[{len(data)}]")
                 await ws.send_bytes(data)
                 if audio_file:
                     # Stream to file
@@ -108,10 +108,12 @@ class VoiceAgentOpenAI:
 
     async def call_llm_async(self, user_input: str) -> str:
         answer = ""
-        prompt = "You’re a helpful assistant. You reply with only one word."
+        # system_prompt = "You’re a helpful assistant. You reply with only one thousands word."
+        system_prompt = "You’re a helpful assistant. You reply with only one word."
+
         stream = await self.client.chat.completions.create(
             model=self.llm_model,
-            messages=[{"role": "system", "content": prompt}, {"role": "user", "content": user_input}],
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_input}],
             stream=True,
         )
 
