@@ -4,12 +4,16 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 import uuid
 import json
+import wave
+import io
 import aiofiles
-from app.voice_agent import VoiceAgentOpenAI
 import os
 import logging
 from openai import AsyncOpenAI
 from pathlib import Path
+from app.realtime_transcribe_client import RealtimeTranscribeClient
+from app import OPENAI_API_KEY
+from app.voice_agent import VoiceAgentOpenAI
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
@@ -31,9 +35,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-import wave
-import io
 
 
 # Convert frames to WAV format in memory
@@ -75,6 +76,9 @@ async def websocket_endpoint(websocket: WebSocket):
     audio_out_filepath = os.path.join(session_dir, "{}_{}.pcm".format(seq, "out"))
 
     agent = VoiceAgentOpenAI()
+
+    transcribe_client = RealtimeTranscribeClient(api_key=OPENAI_API_KEY)
+    await transcribe_client.connect()
 
     logger.info(f"Session[{session_id}] start")
     try:

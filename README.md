@@ -145,6 +145,10 @@ Open your browser at [http://127.0.0.1:8000/client](http://127.0.0.1:8000/client
 python -m examples.test_realtime_transcribe_client
 ```
 
+## Demo
+
+[Download or view the video](./screen_record/screen_20250521.mp4)
+
 ## Implementation Checklist
 
 - [x] Audio WebSocket Server
