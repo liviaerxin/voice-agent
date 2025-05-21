@@ -23,6 +23,7 @@ There are two main architectures for implementing a voice agent:
   - Chat Completions API
   - Speech API
 
+
 ### API Streaming Capabilities
 
 | API             | Input            | Output           | Streaming Support |
@@ -154,7 +155,7 @@ python -m examples.test_realtime_transcribe_client
 
 ## Demo
 
-![Watch the video](https://github.com/user-attachments/assets/4c7e55ba-f48f-43ab-839c-0dbca66aeda2)
+![Watch the video](https://github.com/user-attachments/assets/8eb2d4c0-e499-48ce-b69b-3361d58ee061)
 
 ## Implementation Checklist
 
