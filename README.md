@@ -1,9 +1,9 @@
 
-# Voice Agent Server Prototype
+# Voice Agent Prototype
 
 ## Introduction
 
-This Prototype project implements a **Voice Agent** using the **OpenAI** ecosystem, built around **Speech-to-Text**, **LLM**, and **Text-to-Speech**.
+This Prototype project implements a realtime **Voice Agent** using the **OpenAI** ecosystem, built around **RealTime/Speech-to-Text**, **LLM**, and **Text-to-Speech**.
 
 There are two main architectures for implementing a voice agent:
 
@@ -14,7 +14,7 @@ There are two main architectures for implementing a voice agent:
 - APIs used:
   - Realtime API
 
-### 2. Speech-to-Text → LLM → Text-to-Speech (current approach)
+### 2. RealTime/Speech-to-Text → LLM → Text-to-Speech (current approach)
 
 - **added latency**
 - More control and flexibility
